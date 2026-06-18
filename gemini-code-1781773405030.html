@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock Dashboard - Beiersdorf India</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#F4F6FA;color:#1a1a1a}
+header{background:#1F3864;color:#fff;padding:14px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+header h1{font-size:15px;font-weight:700}
+#hst{font-size:12px;opacity:.8}
+.wrap{max-width:1200px;margin:0 auto;padding:20px}
+.screen{display:none}
+.screen.active{display:block}
+.card{background:#fff;border-radius:14px;border:1px solid #E2E8F0;padding:36px 28px;max-width:580px;margin:0 auto;text-align:center}
+.card h2{font-size:20px;font-weight:700;color:#1F3864;margin-bottom:8px}
+.card p{font-size:13px;color:#64748B;line-height:1.7;margin-bottom:22px}
+.ibox{background:#EBF3FB;border:1px solid #B0C4DE;border-radius:8px;padding:14px 16px;font-size:13px;color:#1F3864;line-height:1.9;text-align:left;margin:16px 0}
+.ibox strong{display:block;margin-bottom:3px;font-size:13px}
+.ibox code{background:#fff;padding:2px 6px;border-radius:4px;font-size:12px;color:#C00000;font-weight:600}
+.dz{border:2px dashed #B0C4DE;border-radius:10px;padding:40px 20px;cursor:pointer;transition:.2s;background:#F8FAFD;margin:16px 0}
+.dz:hover,.dz.drag{background:#EBF3FB;border-color:#2E75B6}
+.dz h3{font-size:16px;font-weight:600;color:#1F3864;margin-bottom:6px}
+.dz p{font-size:13px;color:#64748B}
+#loading-screen{text-align:center;padding:60px 20px}
+.spinner{width:44px;height:44px;border:4px solid #E2E8F0;border-top-color:#2E75B6;border-radius:50%;animation:spin .85s linear infinite;margin:0 auto 18px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pbar{height:6px;background:#E2E8F0;border-radius:3px;max-width:320px;margin:12px auto 0;overflow:hidden}
+.pfill{height:100%;background:#2E75B6;border-radius:3px;transition:width .35s}
+#lmsg{font-size:15px;font-weight:600;color:#1F3864;margin-bottom:5px}
+#lsub{font-size:13px;color:#94A3B8}
+#err-screen{text-align:center;padding:60px 20px}
+.errcard{background:#fff;border-radius:14px;border:1px solid #FFCCCC;padding:36px 28px;max-width:520px;margin:0 auto}
+.errcard h2{font-size:18px;font-weight:700;color:#C00000;margin-bottom:10px}
+.errcard p{font-size:13px;color:#64748B;line-height:1.7;margin-bottom:18px}
+.btn-big{width:100%;padding:12px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:Arial,sans-serif;border:none;margin-top:8px}
+.btn-blue{background:#1F3864;color:#fff}.btn-blue:hover{background:#2E75B6}
+.topbar{background:#fff;border-radius:10px;border:1px solid #E2E8F0;padding:10px 16px;display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.fn{font-weight:600;font-size:14px;color:#1F3864}
+.fc{font-size:12px;color:#64748B}
+.upill{font-size:11px;background:#EBF3FB;color:#1F3864;padding:3px 10px;border-radius:20px;white-space:nowrap}
+.tba{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.btn{padding:7px 13px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;font-family:Arial,sans-serif;display:inline-flex;align-items:center;gap:4px;border:1.5px solid #B0C4DE;background:#fff;color:#1F3864}
+.btn:hover{background:#F4F6FA}
+.btn.g{background:#1F3864;color:#fff;border-color:#1F3864}.btn.g:hover{background:#2E75B6}
+.kgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:10px;margin-bottom:16px}
+.kpi{background:#fff;border-radius:10px;border:1px solid #E2E8F0;padding:13px 15px}
+.kpi .kl{font-size:10px;color:#64748B;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.kpi .kv{font-size:19px;font-weight:700;color:#1F3864}
+.kpi.red .kv{color:#C00000}.kpi.org .kv{color:#C07000}.kpi.grn .kv{color:#216939}
+.tabbar{display:flex;gap:2px;background:#fff;border-radius:10px 10px 0 0;border:1px solid #E2E8F0;border-bottom:none;padding:8px 10px 0;flex-wrap:wrap}
+.tab{padding:7px 14px;font-size:13px;font-weight:500;cursor:pointer;border-radius:7px 7px 0 0;color:#64748B;background:none;border:none;font-family:Arial,sans-serif;border-bottom:3px solid transparent}
+.tab.on{color:#1F3864;border-bottom-color:#1F3864;background:#EBF3FB}
+.tp{background:#fff;border:1px solid #E2E8F0;border-radius:0 0 10px 10px;padding:16px;display:none}
+.tp.on{display:block}
+.cg{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:660px){.cg{grid-template-columns:1fr}}
+.cc{background:#F8FAFD;border-radius:8px;border:1px solid #E2E8F0;padding:13px}
+.cc h3{font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.tw{overflow:auto;border-radius:8px;border:1px solid #E2E8F0;max-height:420px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:#1F3864;color:#fff;padding:8px 11px;text-align:left;font-size:11px;font-weight:600;position:sticky;top:0;white-space:nowrap}
+tbody tr:nth-child(even) td{background:#F8FAFD}
+tbody tr:hover td{background:#EBF3FB}
+td{padding:7px 11px;border-bottom:1px solid #E2E8F0;vertical-align:middle}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.br{background:#FFECEC;color:#C00000}.bo{background:#FFF0E0;color:#8B4000}
+.by{background:#FFFAE0;color:#7A5800}.bg{background:#EAFAF0;color:#216939}.bx{background:#F1F5F9;color:#475569}
+.fb{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
+.fb select,.fb input{padding:7px 10px;border:1px solid #CBD5E1;border-radius:7px;font-size:13px;font-family:Arial,sans-serif;background:#fff}
+.fb input{flex:1;min-width:170px}
+.fb .cnt{font-size:12px;color:#64748B;white-space:nowrap}
+.pb{height:6px;border-radius:3px;background:#E2E8F0;margin-top:3px}
+.pf{height:100%;border-radius:3px;background:#2E75B6}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:#F1F5F9}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px}
+@media print{header,.tba,.tabbar,.fb{display:none!important}.tp{display:block!important}}
+</style>
+</head>
+<body>
+<header>
+  <h1>&#128202; Stock Dashboard &#8212; Beiersdorf India Pvt. Ltd.</h1>
+  <span id="hst">Loading...</span>
+</header>
+<div class="wrap">
+
+<div id="loading-screen" class="screen active">
+  <div class="spinner"></div>
+  <div id="lmsg">Loading dashboard...</div>
+  <div id="lsub">Fetching latest data</div>
+  <div class="pbar"><div class="pfill" id="pf" style="width:0%"></div></div>
+</div>
+
+<div id="err-screen" class="screen">
+  <div class="errcard">
+    <h2>&#9888; No Data Found Yet</h2>
+    <p>This dashboard hasn't received its first <code>data.json</code> file. Generate one below, then upload it to your GitHub repository (same folder as this index.html).</p>
+    <div class="ibox">
+      <strong>&#128196; First-time setup:</strong>
+      1. Click "Generate data.json" below &#8594; upload your Excel<br>
+      2. A <code>data.json</code> file will download<br>
+      3. Go to your GitHub repo &#8594; Upload that file (replace if exists)<br>
+      4. Commit &#8594; Refresh this page after ~30 seconds
+    </div>
+    <button class="btn-big btn-blue" onclick="showScreen('upload-screen')">Generate data.json &#8594;</button>
+  </div>
+</div>
+
+<div id="upload-screen" class="screen">
+<div class="card">
+  <h2>&#8593; Generate Updated Dashboard Data</h2>
+  <p>Upload your Excel file below. A <strong>data.json</strong> file will be generated and downloaded to your computer.</p>
+  <div class="dz" id="dz" onclick="document.getElementById('fi').click()" ondragover="dv(event,1)" ondragleave="dv(event,0)" ondrop="dp(event)">
+    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#2E75B6" stroke-width="1.4" style="display:block;margin:0 auto 12px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    <h3>Drop Excel File Here</h3>
+    <p>or click to browse &nbsp;&#183;&nbsp; .xlsx / .xls</p>
+  </div>
+  <input type="file" id="fi" accept=".xlsx,.xls" style="display:none" onchange="startUpload(this.files[0])">
+</div>
+</div>
+
+<div id="json-ready-screen" class="screen">
+<div class="card">
+  <h2>&#9989; data.json Generated!</h2>
+  <p>The file has been downloaded to your computer. Now upload it to GitHub to update the live dashboard for everyone.</p>
+  <div class="ibox">
+    <strong>&#128196; Step 1 &#8212; Go to your GitHub repository</strong>
+    Open your repo on github.com<br><br>
+    <strong>&#128196; Step 2 &#8212; Upload the file</strong>
+    Click <code>Add file</code> &#8594; <code>Upload files</code> &#8594; drag the downloaded <code>data.json</code><br>
+    GitHub will ask "This will replace data.json" &#8594; confirm<br><br>
+    <strong>&#128196; Step 3 &#8212; Commit</strong>
+    Scroll down &#8594; click <code>Commit changes</code><br><br>
+    <strong>&#9203; Step 4 &#8212; Wait ~30 seconds</strong>
+    Then refresh this page (or share the link again) &#8212; new data will show for everyone!
+  </div>
+  <button class="btn-big btn-blue" onclick="location.reload()">Refresh Dashboard Now &#8594;</button>
+</div>
+</div>
+
+<div id="dash-screen" class="screen">
+  <div class="topbar">
+    <span class="fn" id="fn"></span>
+    <span class="fc" id="fc"></span>
+    <span class="upill" id="upd"></span>
+    <div class="tba">
+      <button class="btn g" onclick="showScreen('upload-screen')">&#8593; Update Data</button>
+      <button class="btn" onclick="dlExcel()">&#8595; Excel</button>
+      <button class="btn" onclick="dlCSV()">&#8595; CSV</button>
+      <button class="btn" onclick="window.print()">&#128438; Print</button>
+    </div>
+  </div>
+  <div class="kgrid" id="kg"></div>
+  <div class="tabbar">
+    <button class="tab on" onclick="st(0)">&#128202; Charts</button>
+    <button class="tab" onclick="st(1)">&#128205; Locations</button>
+    <button class="tab" onclick="st(2)">&#9888; Expiry Risk</button>
+    <button class="tab" onclick="st(3)">&#128269; Customised Data</button>
+    <button class="tab" onclick="st(4)">&#128196; Stock Report</button>
+  </div>
+  <div class="tp on" id="tp0">
+    <div class="cg">
+      <div class="cc"><h3>Stock Value by Location</h3><div style="position:relative;height:230px"><canvas id="lc"></canvas></div></div>
+      <div class="cc"><h3>Expiry Breakdown</h3><div id="el" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;font-size:11px"></div><div style="position:relative;height:200px"><canvas id="ec"></canvas></div></div>
+    </div>
+    <div class="cc" style="margin-top:14px"><h3>Top 10 Items by Stock Value</h3><div id="tw" style="position:relative"><canvas id="tc"></canvas></div></div>
+  </div>
+  <div class="tp" id="tp1"><div class="fb"><select id="sf1" onchange="rL()"><option value="">All Store Types</option></select><span class="cnt" id="lc2"></span></div><div class="tw" id="lt"></div></div>
+  <div class="tp" id="tp2">
+    <div style="background:#FFF3F3;border:1px solid #FFCCCC;border-radius:7px;padding:8px 13px;margin-bottom:10px;font-size:13px;color:#8B0000"><strong>&#9888; Action Required</strong> &#8212; Items expired or expiring within 12 months.</div>
+    <div class="fb"><select id="ef" onchange="rE()"><option value="">All Categories</option><option>Expired</option><option>0-3 Months</option><option>3-6 Months</option><option>6-12 Months</option></select><select id="lf1" onchange="rE()"><option value="">All Locations</option></select><span class="cnt" id="ec2"></span></div>
+    <div class="tw" id="et"></div>
+  </div>
+  <div class="tp" id="tp3"><div class="fb"><input type="text" id="sb" placeholder="Search by item name, store, item code or batch no..." oninput="rF()"><select id="stf" onchange="rF()"><option value="">All Store Types</option></select><select id="lf2" onchange="rF()"><option value="">All Locations</option></select><span class="cnt" id="fc2"></span></div><div class="tw" id="ft"></div></div>
+  <div class="tp" id="tp4"><div class="fb"><input type="text" id="sb2" placeholder="Search any column..." oninput="rR()"><select id="lf3" onchange="rR()"><option value="">All Locations</option></select><select id="sf2" onchange="rR()"><option value="">All Store Types</option></select><span class="cnt" id="rc2"></span></div><div class="tw" id="rt"></div></div>
+</div>
+
+</div>
+<script>
+let D=[],CH={},RAW=[],RC=[],FN='';
+
+window.onload=async function(){
+  sp(20,'Loading latest data...','Fetching from server');
+  try{
+    const res=await fetch('./data.json?t='+Date.now());
+    if(!res.ok) throw new Error('not found');
+    const json=await res.json();
+    if(!json.data || !json.data.length) throw new Error('empty data');
+    D=json.data; RAW=json.raw||[]; RC=json.rawCols||[];
+    FN=(json.meta && json.meta.fname) ? json.meta.fname : 'Stock Report';
+    sp(95,'Building dashboard...');
+    setTimeout(()=>{ build(FN, json.meta); }, 200);
+  }catch(e){
+    showScreen('err-screen');
+    document.getElementById('hst').textContent='No data yet';
+  }
+};
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function sp(p,m,s){
+  document.getElementById('pf').style.width=p+'%';
+  document.getElementById('lmsg').textContent=m;
+  if(s) document.getElementById('lsub').textContent=s;
+}
+function dv(e,a){e.preventDefault();document.getElementById('dz').classList.toggle('drag',!!a)}
+function dp(e){e.preventDefault();dv(e,0);startUpload(e.dataTransfer.files[0])}
+
+function startUpload(file){
+  if(!file) return;
+  FN=file.name;
+  showScreen('loading-screen');
+  sp(10,'Reading Excel file...');
+  const r=new FileReader();
+  r.onload=e=>{
+    sp(50,'Processing records...');
+    setTimeout(()=>{
+      try{
+        D=parse(e.target.result);
+        RAW=parseRaw(e.target.result);
+        sp(90,'Generating data.json...');
+        setTimeout(()=>{ generateJSON(file.name); }, 200);
+      }catch(err){ showScreen('upload-screen'); alert('Error: '+err.message); }
+    },80);
+  };
+  r.readAsArrayBuffer(file);
+}
+
+function generateJSON(fname){
+  const payload=JSON.stringify({meta:{fname:fname,updated:new Date().toISOString(),records:D.length},data:D,raw:RAW,rawCols:RC});
+  const blob=new Blob([payload],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='data.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  showScreen('json-ready-screen');
+}
+
+function parse(buf){
+  const wb=XLSX.read(buf,{type:'array'}),ws=wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(ws,{defval:''}).map(r=>({
+    LOCCD:(r.LOCCD||'').toString().trim(),LOCNAME:(r.LOCNAME||'').toString().trim(),
+    STORENAME:(r.STORENAME||'').toString().trim(),STORECD:(r.STORECD||'').toString().trim(),
+    ITEMCD:(r.ITEMCD||'').toString().trim(),ITEMNAME:(r.ITEMNAME||'').toString().trim(),
+    BTREFNO:(r.BTREFNO||'').toString().trim(),MNFMMYY:(r.MNFMMYY||'').toString().trim(),
+    EXPMMYY:(r.EXPMMYY||'').toString().trim(),MTHS2EXP:+r.MTHS2EXP||0,
+    CLSTKQTY:+r.CLSTKQTY||0,STKRATE:+r.STKRATE||0,CLSTKVAL:+r.CLSTKVAL||0,
+    EXP_CAT:ecat(+r.MTHS2EXP||0),STORE_TYPE:stype((r.STORECD||'').toString())
+  }));
+}
+function parseRaw(buf){
+  const wb=XLSX.read(buf,{type:'array'}),ws=wb.Sheets[wb.SheetNames[0]];
+  const rows=XLSX.utils.sheet_to_json(ws,{defval:'',raw:false});
+  if(!rows.length) return [];
+  RC=Object.keys(rows[0]);
+  return rows;
+}
+function ecat(m){if(m<0)return'Expired';if(m<=3)return'0-3 Months';if(m<=6)return'3-6 Months';if(m<=12)return'6-12 Months';if(m>=999)return'No Expiry';return'>12 Months';}
+function stype(s){s=s.trim().toUpperCase();if(s.includes('PHC'))return'PHC';if(s.includes('B2B'))return'B2B';if(s.includes('MRR'))return'MRR';if(s.includes('GOV'))return'GOV';return'OTHER';}
+function inr(n){return '₹'+Math.round(n).toLocaleString('en-IN');}
+function num(n){return Math.round(n).toLocaleString('en-IN');}
+function bc(c){if(c==='Expired')return'br';if(c==='0-3 Months')return'bo';if(c==='3-6 Months'||c==='6-12 Months')return'by';if(c==='No Expiry')return'bx';return'bg';}
+
+function updateKPIBoxes(filteredData) {
+  const tV=filteredData.reduce((s,r)=>s+r.CLSTKVAL,0),tQ=filteredData.reduce((s,r)=>s+r.CLSTKQTY,0);
+  const expV=filteredData.filter(r=>r.EXP_CAT==='Expired').reduce((s,r)=>s+r.CLSTKVAL,0);
+  const nearV=filteredData.filter(r=>r.MTHS2EXP>=0 && r.MTHS2EXP<=6).reduce((s,r)=>s+r.CLSTKVAL,0);
+  
+  document.getElementById('kg').innerHTML=[
+    {l:'Total Records',v:filteredData.length.toLocaleString(),c:''},
+    {l:'Total Qty',v:num(tQ),c:''},
+    {l:'Total Stock Value',v:inr(tV),c:''},
+    {l:'Locations',v:new Set(filteredData.map(r=>r.LOCCD)).size,c:'grn'},
+    {l:'Stores',v:new Set(filteredData.map(r=>r.STORENAME)).size,c:'grn'},
+    {l:'Unique SKUs',v:new Set(filteredData.map(r=>r.ITEMCD)).size,c:''},
+    {l:'Expired Stock',v:inr(expV),c:'red'},
+    {l:'Near Expiry ≤6M',v:inr(nearV),c:'org'},
+  ].map(k=>'<div class="kpi '+k.c+'"><div class="kl">'+k.l+'</div><div class="kv">'+k.v+'</div></div>').join('');
+}
+
+function build(fname,meta){
+  showScreen('dash-screen');
+  document.getElementById('fn').textContent=fname;
+  document.getElementById('fc').textContent=D.length.toLocaleString()+' records';
+  document.title='Stock Dashboard - '+fname;
+  if(meta && meta.updated){
+    const d=new Date(meta.updated);
+    document.getElementById('upd').textContent='Updated: '+d.toLocaleDateString('en-IN')+' '+d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+  }
+  document.getElementById('hst').textContent=D.length.toLocaleString()+' records loaded';
+  
+  updateKPIBoxes(D);
+  charts(); locF(); rL(); expF(); rE(); fullF(); rawF();
+}
+
+function charts(){
+  Object.values(CH).forEach(c=>{try{c.destroy()}catch(e){}}); CH={};
+  if(!D.length) return;
+  const lM={}; D.forEach(r=>{lM[r.LOCCD]=(lM[r.LOCCD]||0)+r.CLSTKVAL;});
+  const lS=Object.entries(lM).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  CH.l=new Chart(document.getElementById('lc'),{type:'bar',data:{labels:lS.map(x=>x[0]),datasets:[{data:lS.map(x=>Math.round(x[1]/100000)/10),backgroundColor:'#2E75B6',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'₹'+c.parsed.y+'L'}}},scales:{y:{ticks:{callback:v=>'₹'+v+'L'},grid:{color:'#F1F5F9'}},x:{ticks:{font:{size:11}},grid:{display:false}}}}});
+  const eM={}; D.forEach(r=>{eM[r.EXP_CAT]=(eM[r.EXP_CAT]||0)+r.CLSTKVAL;});
+  const eO=['Expired','0-3 Months','3-6 Months','6-12 Months','>12 Months','No Expiry'],eC=['#C00000','#E07000','#E8B000','#9DC350','#2E7D32','#94A3B8'];
+  const ks=eO.filter(k=>eM[k]>0), tot=Object.values(eM).reduce((s,v)=>s+v,0);
+  document.getElementById('el').innerHTML=ks.map(k=>'<span style="display:flex;align-items:center;gap:3px"><span style="width:9px;height:9px;border-radius:2px;background:'+eC[eO.indexOf(k)]+';display:inline-block"></span><span style="color:#475569">'+k+' '+(eM[k]/tot*100).toFixed(1)+'%</span></span>').join('');
+  CH.e=new Chart(document.getElementById('ec'),{type:'doughnut',data:{labels:ks,datasets:[{data:ks.map(k=>Math.round(eM[k])),backgroundColor:ks.map(k=>eC[eO.indexOf(k)])}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:false}}}});
+  const iM={}; D.forEach(r=>{iM[r.ITEMNAME]=(iM[r.ITEMNAME]||0)+r.CLSTKVAL;});
+  const t10=Object.entries(iM).sort((a,b)=>b[1]-a[1]).slice(0,10).reverse();
+  document.getElementById('tw').style.height=(t10.length*40+60)+'px';
+  CH.t=new Chart(document.getElementById('tc'),{type:'bar',data:{labels:t10.map(x=>x[0].length>44?x[0].slice(0,44)+'...':x[0]),datasets:[{data:t10.map(x=>Math.round(x[1]/100000)/10),backgroundColor:'#1F3864',borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'₹'+c.parsed.x+'L'}}},scales:{x:{ticks:{callback:v=>'₹'+v+'L'},grid:{color:'#F1F5F9'}},y:{ticks:{font:{size:11}},grid:{display:false}}}}});
+}
+
+function locF(){const t=[...new Set(D.map(r=>r.STORE_TYPE))].sort();document.getElementById('sf1').innerHTML='<option value="">All Store Types</option>'+t.map(x=>'<option>'+x+'</option>').join('');}
+function rL(){
+  const tp=document.getElementById('sf1').value, src=tp?D.filter(r=>r.STORE_TYPE===tp):D, m={};
+  
+  updateKPIBoxes(src);
+
+  src.forEach(r=>{if(!m[r.LOCCD])m[r.LOCCD]={n:r.LOCNAME,s:new Set(),t:new Set(),q:0,v:0};m[r.LOCCD].s.add(r.STORENAME);m[r.LOCCD].t.add(r.STORE_TYPE);m[r.LOCCD].q+=r.CLSTKQTY;m[r.LOCCD].v+=r.CLSTKVAL;});
+  const tot=Object.values(m).reduce((s,v)=>s+v.v,0), rows=Object.entries(m).sort((a,b)=>b[1].v-a[1].v);
+  document.getElementById('lc2').textContent=rows.length+' locations';
+  let h='<table><thead><tr><th style="width:75px">Loc Code</th><th>Location Name</th><th style="width:82px;text-align:center">Type</th><th style="width:64px;text-align:center">Stores</th><th style="width:112px;text-align:right">Total Qty</th><th style="width:145px;text-align:right">Stock Value</th><th style="width:115px">% Share</th></tr></thead><tbody>';
+  rows.forEach(function(arr){var c=arr[0],d=arr[1];var p=tot?(d.v/tot*100).toFixed(1):'0';h+='<tr><td style="font-weight:700;color:#1F3864">'+c+'</td><td>'+d.n+'</td><td style="text-align:center"><span style="font-size:11px;background:#EBF3FB;color:#1F3864;padding:2px 7px;border-radius:10px">'+[...d.t].join(',')+'</span></td><td style="text-align:center">'+d.s.size+'</td><td style="text-align:right">'+num(d.q)+'</td><td style="text-align:right;font-weight:600">'+inr(d.v)+'</td><td><div style="font-size:11px;color:#64748B">'+p+'%</div><div class="pb"><div class="pf" style="width:'+Math.min(p,100)+'%"></div></div></td></tr>';});
+  var tt=rows.reduce(function(s,arr){return{q:s.q+arr[1].q,v:s.v+arr[1].v};},{q:0,v:0});
+  h+='<tr style="background:#1F3864"><td colspan="4" style="color:#fff;font-weight:700">TOTAL</td><td style="text-align:right;color:#fff;font-weight:700">'+num(tt.q)+'</td><td style="text-align:right;color:#fff;font-weight:700">'+inr(tt.v)+'</td><td style="color:#fff">100%</td></tr></tbody></table>';
+  document.getElementById('lt').innerHTML=h;
+}
+
+function expF(){const l=[...new Set(D.map(r=>r.LOCCD))].sort();document.getElementById('lf1').innerHTML='<option value="">All Locations</option>'+l.map(x=>'<option>'+x+'</option>').join('');}
+function rE(){
+  const cat=document.getElementById('ef').value, loc=document.getElementById('lf1').value;
+  let rows=D.filter(r=>r.MTHS2EXP<=12);
+  if(cat) rows=rows.filter(r=>r.EXP_CAT===cat); if(loc) rows=rows.filter(r=>r.LOCCD===loc);
+  
+  updateKPIBoxes(rows);
+
+  rows.sort((a,b)=>a.MTHS2EXP-b.MTHS2EXP);
+  document.getElementById('ec2').textContent=rows.length.toLocaleString()+' records';
+  let h='<table><thead><tr><th style="width:105px">Category</th><th style="width:60px">Loc</th><th style="width:155px">Store</th><th>Item Name</th><th style="width:95px">Batch No</th><th style="width:76px;text-align:center">Mfg Date</th><th style="width:76px;text-align:center">Exp Date</th><th style="width:52px;text-align:center">Mths</th><th style="width:66px;text-align:right">Qty</th><th style="width:108px;text-align:right">Value</th></tr></thead><tbody>';
+  rows.slice(0,500).forEach(r=>{var mc=r.MTHS2EXP<0?'#C00000':r.MTHS2EXP<=3?'#8B4000':'#1a1a1a';h+='<tr><td><span class="badge '+bc(r.EXP_CAT)+'">'+r.EXP_CAT+'</span></td><td style="font-weight:600">'+r.LOCCD+'</td><td style="font-size:12px">'+r.STORENAME.slice(0,22)+'</td><td style="font-size:12px">'+r.ITEMNAME.slice(0,40)+'</td><td style="font-size:11px;font-family:monospace;color:#475569">'+r.BTREFNO.slice(0,14)+'</td><td style="text-align:center;color:#475569">'+r.MNFMMYY+'</td><td style="text-align:center">'+r.EXPMMYY+'</td><td style="text-align:center;font-weight:700;color:'+mc+'">'+r.MTHS2EXP+'</td><td style="text-align:right">'+num(r.CLSTKQTY)+'</td><td style="text-align:right;font-weight:600">'+inr(r.CLSTKVAL)+'</td></tr>';});
+  if(rows.length>500) h+='<tr><td colspan="10" style="text-align:center;color:#64748B;padding:10px">...'+(rows.length-500)+' more records.</td></tr>';
+  h+='</tbody></table>'; document.getElementById('et').innerHTML=h;
+}
+
+function fullF(){
+  const l=[...new Set(D.map(r=>r.LOCCD))].sort(), t=[...new Set(D.map(r=>r.STORE_TYPE))].sort();
+  document.getElementById('lf2').innerHTML='<option value="">All Locations</option>'+l.map(x=>'<option>'+x+'</option>').join('');
+  document.getElementById('stf').innerHTML='<option value="">All Store Types</option>'+t.map(x=>'<option>'+x+'</option>').join('');
+}
+function rF(){
+  const s=document.getElementById('sb').value.toLowerCase(), tp=document.getElementById('stf').value, loc=document.getElementById('lf2').value;
+  let rows=D;
+  if(s) rows=rows.filter(r=>r.ITEMNAME.toLowerCase().includes(s)||r.STORENAME.toLowerCase().includes(s)||r.ITEMCD.toLowerCase().includes(s)||r.BTREFNO.toLowerCase().includes(s));
+  if(tp) rows=rows.filter(r=>r.STORE_TYPE===tp); if(loc) rows=rows.filter(r=>r.LOCCD===loc);
+  
+  updateKPIBoxes(rows);
+
+  document.getElementById('fc2').textContent=rows.length.toLocaleString()+' records';
+  let h='<table><thead><tr><th style="width:58px">Loc</th><th style="width:148px">Store</th><th style="width:74px;text-align:center">Type</th><th style="width:106px">Item Code</th><th>Item Name</th><th style="width:104px">Batch No</th><th style="width:74px;text-align:center">Mfg Date</th><th style="width:74px;text-align:center">Exp Date</th><th style="width:88px">Status</th><th style="width:64px;text-align:right">Qty</th><th style="width:108px;text-align:right">Value</th></tr></thead><tbody>';
+  rows.slice(0,500).forEach(r=>{h+='<tr><td style="font-weight:700;color:#1F3864">'+r.LOCCD+'</td><td style="font-size:12px">'+r.STORENAME.slice(0,22)+'</td><td style="text-align:center"><span style="font-size:11px;background:#EBF3FB;color:#1F3864;padding:2px 7px;border-radius:10px">'+r.STORE_TYPE+'</span></td><td style="font-size:12px;color:#64748B">'+r.ITEMCD+'</td><td style="font-size:12px">'+r.ITEMNAME.slice(0,40)+'</td><td style="font-size:12px;font-family:monospace;color:#475569">'+r.BTREFNO+'</td><td style="text-align:center;color:#475569">'+r.MNFMMYY+'</td><td style="text-align:center">'+r.EXPMMYY+'</td><td><span class="badge '+bc(r.EXP_CAT)+'">'+r.EXP_CAT+'</span></td><td style="text-align:right">'+num(r.CLSTKQTY)+'</td><td style="text-align:right;font-weight:600">'+inr(r.CLSTKVAL)+'</td></tr>';});
+  if(rows.length>500) h+='<tr><td colspan="11" style="text-align:center;color:#64748B;padding:10px">...'+(rows.length-500)+' more. Use filters.</td></tr>';
+  h+='</tbody></table>'; document.getElementById('ft').innerHTML=h;
+}
+
+function rawF(){
+  const l=[...new Set(D.map(r=>r.LOCCD))].sort(), t=[...new Set(D.map(r=>r.STORE_TYPE))].sort();
+  document.getElementById('lf3').innerHTML='<option value="">All Locations</option>'+l.map(x=>'<option>'+x+'</option>').join('');
+  document.getElementById('sf2').innerHTML='<option value="">All Store Types</option>'+t.map(x=>'<option>'+x+'</option>').join('');
+  rR();
+}
+function rR(){
+  if(!RAW.length){document.getElementById('rt').innerHTML='<div style="padding:30px;text-align:center;color:#64748B;font-size:13px">Raw data not available.</div>';return;}
+  const s=document.getElementById('sb2').value.toLowerCase(), loc=document.getElementById('lf3').value, stp=document.getElementById('sf2').value;
+  let rows=RAW;
+  let kpiSourceRows=D;
+
+  if(loc||stp){
+    const vi=new Set();
+    D.forEach((r,i)=>{
+      if((!loc||r.LOCCD===loc)&&(!stp||r.STORE_TYPE===stp)) vi.add(i);
+    });
+    rows=RAW.filter((_,i)=>vi.has(i));
+    kpiSourceRows=D.filter((_,i)=>vi.has(i));
+  }
+  if(s) {
+    const matchedIndices = new Set();
+    RAW.forEach((r, i) => {
+      if(Object.values(r).some(v=>(v+'').toLowerCase().includes(s))) {
+         matchedIndices.add(i);
+      }
+    });
+    rows = rows.filter((_, i) => matchedIndices.has(RAW.indexOf(rows[i])));
+    kpiSourceRows = kpiSourceRows.filter((_, i) => matchedIndices.has(RAW.indexOf(rows[i])));
+  }
+
+  updateKPIBoxes(kpiSourceRows);
+
+  document.getElementById('rc2').textContent=rows.length.toLocaleString()+' records';
+  const cols=RC.length?RC:(rows.length?Object.keys(rows[0]):[]);
+  let h='<table><thead><tr>'+cols.map(c=>'<th style="white-space:nowrap;font-size:11px">'+c+'</th>').join('')+'</tr></thead><tbody>';
+  rows.slice(0,500).forEach(r=>{h+='<tr>'+cols.map(c=>'<td style="font-size:12px;white-space:nowrap">'+(r[c]!==undefined?r[c]:'')+'</td>').join('')+'</tr>';});
+  if(rows.length>500) h+='<tr><td colspan="'+cols.length+'" style="text-align:center;color:#64748B;padding:10px;font-size:12px">...'+(rows.length-500)+' more records.</td></tr>';
+  h+='</tbody></table>'; document.getElementById('rt').innerHTML=h;
+}
+
+function st(i){
+  document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('on',i===j));
+  document.querySelectorAll('.tp').forEach((p,j)=>p.classList.toggle('on',i===j));
+  
+  if(i===0) { updateKPIBoxes(D); setTimeout(()=>{Object.values(CH).forEach(c=>{try{c.resize()}catch(e){}});},60); }
+  if(i===1) rL(); 
+  if(i===2) rE(); 
+  if(i===3) rF(); 
+  if(i===4) rR();
+}
+
+function dlExcel(){
+  if(!D.length) return;
+  const wb=XLSX.utils.book_new(), cols=['LOCCD','LOCNAME','STORENAME','STORE_TYPE','ITEMCD','ITEMNAME','BTREFNO','MNFMMYY','EXPMMYY','MTHS2EXP','EXP_CAT','CLSTKQTY','STKRATE','CLSTKVAL'], hdrs=['Loc Code','Location Name','Store Name','Store Type','Item Code','Item Name','Batch No','Mfg MM/YY','Exp MM/YY','Months to Exp','Expiry Category','Closing Qty','Rate','Closing Value'];
+  const ws=XLSX.utils.aoa_to_sheet([hdrs,...D.map(r=>cols.map(c=>r[c]))]);
+  ws['!cols']=[9,28,28,10,18,42,16,10,10,12,15,10,10,16].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,ws,'Full Data'); XLSX.writeFile(wb,'StockReport_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+function dlCSV(){
+  if(!D.length) return;
+  const cols=['LOCCD','LOCNAME','STORENAME','STORE_TYPE','ITEMCD','ITEMNAME','BTREFNO','MNFMMYY','EXPMMYY','MTHS2EXP','EXP_CAT','CLSTKQTY','STKRATE','CLSTKVAL'];
+  let csv=cols.join(',')+'\n';
+  D.forEach(r=>{csv+=cols.map(c=>{const v=r[c];return typeof v==='string'&&v.includes(',')?'"'+v+'"':v;}).join(',')+'\n';});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='StockReport_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+}
+</script>
+</body>
+</html>
