@@ -282,7 +282,6 @@ function build(fname,meta){
     {l:'Total Qty',v:num(tQ),c:''},
     {l:'Total Stock Value',v:inr(tV),c:''},
     {l:'Locations',v:new Set(D.map(r=>r.LOCCD)).size,c:'grn'},
-    {l:'Stores',v:new Set(D.map(r=>r.STORENAME)).size,c:'grn'},
     {l:'Unique SKUs',v:new Set(D.map(r=>r.ITEMCD)).size,c:''},
     {l:'Expired Stock',v:inr(expV),c:'red'},
     {l:'Near Expiry ≤6M',v:inr(nearV),c:'org'},
